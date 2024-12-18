@@ -4,47 +4,51 @@ const cartBtn = document.querySelector('.cart-btn')
 const cartModal = document.querySelector('.cart')
 const backDrop = document.querySelector('.backdrop')
 const closeModal = document.querySelector('.cart-item-confirm')
-const productsDOM = document.querySelector('.products-center')
-const cartTotal = document.querySelector('.cart-total')
+
 const cartItems = document.querySelector('.cart-items')
+const cartTotal = document.querySelector('.cart-total')
 const cartContent = document.querySelector('.cart-content')
-const clearCart = document.querySelector('.clear-cart')
+const productsDOM = document.querySelector('.products-center')
+const clearCartBtn = document.querySelector('.clear-cart')
 
 let cart = []
+
 let buttonsDOM = []
+// get products
 class Products {
 	getProducts() {
 		return productsData
 	}
 }
 
+// dispaly products :
 class UI {
 	displayProducts(products) {
 		let result = ''
-		products.forEach(item => {
+		products.forEach(product => {
 			result += `<div class="product">
-   <div class="img-container">
-     <img src=${item.imageUrl} class="product-img" />
-   </div>
-   <div class="product-desc">
-     <p class="product-price">$ ${item.price}</p>
-     <p class="product-title">${item.title}</p>
-   </div>
-   <button class="btn add-to-cart" data-id=${item.id}>
-     add to cart
-   </button>
- </div>`
-			productsDOM.innerHTML = result
+      <div class="img-container">
+        <img src=${product.imageUrl} class="product-img" />
+      </div>
+      <div class="product-desc">
+        <p class="product-price">${product.price}</p>
+        <p class="product-title">$ ${product.title}</p>
+      </div>
+      <button class="btn add-to-cart" data-id=${product.id}>
+        add to cart
+      </button>
+    </div>`
 		})
+		productsDOM.innerHTML = result
 	}
-	getAddToCartBtns() {
+	getCartBtns() {
 		const addToCartBtns = [
 			...document.querySelectorAll('.add-to-cart'),
 		]
 		buttonsDOM = addToCartBtns
 		addToCartBtns.forEach(btn => {
 			const id = btn.dataset.id
-			const isInCart = cart.find(p => p.id === parseInt(id))
+			const isInCart = cart.find(item => item.id === id)
 			if (isInCart) {
 				btn.innerText = 'In Cart'
 				btn.disabled = true
@@ -52,98 +56,175 @@ class UI {
 			btn.addEventListener('click', event => {
 				event.target.innerText = 'In Cart'
 				event.target.disabled = true
+				// 1. get product from products
 				const addedProduct = {
 					...Storage.getProduct(id),
 					quantity: 1,
 				}
 
+				// 2. add product to cart
 				cart = [...cart, addedProduct]
+				// 3. save cart in local sotrage
 				Storage.saveCart(cart)
+				// 4. set cart values
 				this.setCartValue(cart)
+				// 5. dispaly cart item
 				this.addCartItem(addedProduct)
 			})
 		})
 	}
+
 	setCartValue(cart) {
-		let tempCartItem = 0
+		let tempCartItems = 0
 		const totalPrice = cart.reduce((acc, curr) => {
-			tempCartItem += curr.quantity
-			return acc + curr.quantity * curr.price
+			tempCartItems += curr.quantity
+			return curr.quantity * curr.price + acc
 		}, 0)
-		cartTotal.innerText = `total price : ${totalPrice.toFixed(2)} $`
-		cartItems.innerText = tempCartItem
+		cartTotal.innerText = `total price : ${parseFloat(
+			totalPrice,
+		).toFixed(2)} $`
+		cartItems.innerText = tempCartItems
 	}
-	addCartItem(cartItem) {
+	addCartItem(cart) {
 		const div = document.createElement('div')
 		div.classList.add('cart-item')
-		div.innerHTML = `<img class="cart-item-img" src=${cartItem.imageUrl} />
-<div class="cart-item-desc">
-  <h4>${cartItem.title}</h4>
-  <h5>$ ${cartItem.price}</h5>
-</div>
-<div class="cart-item-conteoller">
-  <i class="fas fa-chevron-up" data-id=${cartItem.id}></i>
-  <p>${cartItem.quantity}</p>
-  <i class="fas fa-chevron-down" data-id=${cartItem.id}></i></div>
-	<i class="far fa-trash-alt" data-id=${cartItem.id}></i>`
+		div.innerHTML = `<div><img class="cart-item-img" src=${cart.imageUrl} /></div>
+ <div class="cart-item-desc">
+   <h4>${cart.title}</h4>
+   <h5>$ ${cart.price}</h5>
+ </div>
+ <div class="cart-item-conteoller">
+   <i class="fas fa-chevron-up" data-id=${cart.id}></i>
+   <p class="item-quantity">${cart.quantity}</p>
+   <i class="fas fa-chevron-down" data-id=${cart.id}></i>
+ </div>
+ <i class="fas fa-trash remove-item" data-id=${cart.id}></i>
+ `
 		cartContent.appendChild(div)
 	}
+
 	setupApp() {
-		cart = Storage.getCart() || []
-		cart.forEach(cartItem => this.addCartItem(cartItem))
+		cart = Storage.getCart()
 		this.setCartValue(cart)
+		this.populateCart(cart)
+	}
+
+	populateCart(cart) {
+		cart.forEach(item => this.addCartItem(item))
 	}
 	cartLogic() {
-		clearCart.addEventListener('click', () => {
+		// clear cart button
+		clearCartBtn.addEventListener('click', () => {
 			this.clearCart()
 		})
+
+		// cart functionality
+		cartContent.addEventListener('click', event => {
+			if (event.target.classList.contains('remove-item')) {
+				const removeItem = event.target
+				const id = removeItem.dataset.id
+				console.log(id)
+				// remove from DOM :
+				// console.log(removeItem.parentElement);
+				cartContent.removeChild(removeItem.parentElement)
+
+				// remove item from cart not DOM !
+				this.removeItem(id)
+			} else if (event.target.classList.contains('fa-chevron-up')) {
+				const addQuantity = event.target
+				const id = addQuantity.dataset.id
+				const addedItem = cart.find(c => c.id == id)
+				addedItem.quantity++
+				// update storage
+				Storage.saveCart(cart)
+				// update total price
+				this.setCartValue(cart)
+				// update item quantity :
+				// console.log(addQuantity.nextElementSibling);
+				addQuantity.nextElementSibling.innerText = addedItem.quantity
+			} else if (event.target.classList.contains('fa-chevron-down')) {
+				const subQuantity = event.target
+				const id = subQuantity.dataset.id
+				const substractedItem = cart.find(c => c.id == id)
+
+				if (substractedItem.quantity === 1) {
+					this.removeItem(id)
+					cartContent.removeChild(
+						subQuantity.parentElement.parentElement,
+					)
+					return
+				}
+
+				substractedItem.quantity--
+				// update storage
+				Storage.saveCart(cart)
+				// update total price
+				this.setCartValue(cart)
+				// update item quantity :
+				// console.log(subQuantity.nextElementSibling);
+				subQuantity.previousElementSibling.innerText =
+					substractedItem.quantity
+			}
+		})
 	}
+
 	clearCart() {
-		cart.forEach(cItem => this.removeItem(cItem.id))
+		// loop on all the item and tigger remove for each one
+		cart.forEach(item => this.removeItem(item.id))
+		// console.log(cartContent.children[0]);
 		while (cartContent.children.length) {
 			cartContent.removeChild(cartContent.children[0])
 		}
 		closeModalFunction()
 	}
+
 	removeItem(id) {
-		cart = cart.filter(cItem => cItem.id !== id)
+		// resuable method for signle remove and clear all
+		cart = cart.filter(cartItem => cartItem.id != id)
 		this.setCartValue(cart)
 		Storage.saveCart(cart)
-		this.getSingleButton()
+		const button = this.getSingleButton(id)
+		button.disabled = false
+		button.innerHTML = `add to cart`
 	}
-	getSingleButton() {
-		const button = buttonsDOM.find(
+	getSingleButton(id) {
+		// should be parseInt to get correct result
+		return buttonsDOM.find(
 			btn => parseInt(btn.dataset.id) === parseInt(id),
 		)
-		button.innerText = 'add to cart'
-		buttonsDOM.disabled = false
 	}
 }
 
+// storage :
 class Storage {
 	static saveProducts(products) {
 		localStorage.setItem('products', JSON.stringify(products))
 	}
+
 	static getProduct(id) {
-		const prod = JSON.parse(localStorage.getItem('products'))
-		return prod.find(p => p.id === parseInt(id))
+		const _products = JSON.parse(localStorage.getItem('products'))
+		return _products.find(p => p.id == id)
 	}
 	static saveCart(cart) {
 		localStorage.setItem('cart', JSON.stringify(cart))
 	}
 	static getCart() {
-		return JSON.parse(localStorage.getItem('cart'))
+		return localStorage.getItem('cart')
+			? JSON.parse(localStorage.getItem('cart'))
+			: []
 	}
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-	const products = new Products()
-	const productsData = products.getProducts()
 	const ui = new UI()
+	// set up already added cart items
 	ui.setupApp()
-	ui.cartLogic()
+	const products = new Products()
+	//   get all products :
+	const productsData = products.getProducts()
 	ui.displayProducts(productsData)
-	ui.getAddToCartBtns()
+	ui.getCartBtns()
+	ui.cartLogic()
 	Storage.saveProducts(productsData)
 })
 
