@@ -31,8 +31,8 @@ class UI {
         <img src=${product.imageUrl} class="product-img" />
       </div>
       <div class="product-desc">
-        <p class="product-price">${product.price}</p>
-        <p class="product-title">$ ${product.title}</p>
+        <p class="product-price">$ ${product.price}</p>
+        <p class="product-title">${product.title}</p>
       </div>
       <button class="btn add-to-cart" data-id=${product.id}>
         add to cart
