@@ -73,4 +73,4 @@ git clone https://github.com/mehdias63/Shopping-Cart.git
 
 ## 👨‍💻 Author
 
-Developed by Your Name
+Developed by Mehdi Tatasadi
